@@ -58,19 +58,19 @@ jobs:
         run: |
           cd openwrt
           rm ./package/base-files/files/etc/rc.local
-          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/rc.local/gl-rc.local -O ./package/base-files/files/etc/rc.local
-          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/rc.local/rc.local.ori -O ./package/base-files/files/etc/rc.local.ori
+          wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/rc.local/gl-rc.local -O ./package/base-files/files/etc/rc.local
+          wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/rc.local/rc.local.ori -O ./package/base-files/files/etc/rc.local.ori
           mkdir ./package/base-files/files/root
-          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/setup/gl-mv-setup.sh -O ./package/base-files/files/root/setup.sh
+          wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/setup/gl-mv-setup.sh -O ./package/base-files/files/root/setup.sh
           chmod +x ./package/base-files/files/root/setup.sh
 
       - name: Make Config
         run: |
           cd openwrt
           #rm ./.config
-          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/1_common.seed -O ./.config
-          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/9_1g_arm.seed -O ./9_1g_arm.seed
-          #wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/4_with_turbo_acc_full.seed  -O ./4_without_turbo_acc.seed 
+          wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/.config/1_common.seed -O ./.config
+          wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/.config/9_1g_arm.seed -O ./9_1g_arm.seed
+          #wget https://github.com/AndroidOL/GL-MV1000_OpenWRT/raw/main/OpenWRT/.config/4_with_turbo_acc_full.seed  -O ./4_without_turbo_acc.seed 
           
           cat ./9_1g_arm.seed >> ./.config
           #cat ./4_without_turbo_acc.seed >> ./.config
