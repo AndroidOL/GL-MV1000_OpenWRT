@@ -1,0 +1,110 @@
+name: GL-MV1000
+ 
+on:
+  push:
+    branches: 
+      - main
+    paths:
+      - '.github/workflows/GL-MV1000.yml'
+  schedule:
+    - cron: 0 1 * * *
+  watch:
+    types: started
+  workflow_dispatch:
+    
+jobs:
+  build:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          ref: main
+          
+      - name: Init build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          docker rmi $(docker images -q)
+          sudo -E apt-get remove -y --purge azure-cli ghc zulu* hhvm llvm* firefox google* dotnet* powershell mysql* php* mssql-tools msodbcsql17 android*
+          sudo -E apt-get update -y
+          sudo -E apt-get full-upgrade -y
+          sudo -E apt-get install -y build-essential asciidoc binutils bzip2 coreutils gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-8 gcc++-8 gcc-8-multilib g++-8-multilib p7zip p7zip-full msmtp libssl-dev texinfo libreadline-dev libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint ccache curl wget vim nano python python3 python-pip python3-pip python3-setuptools python-ply python3-ply haveged lrzsz device-tree-compiler scons antlr3 gperf ecj fastjar re2c xz-utils tar zip
+          sudo -EH pip3 install -U pyrogram tgCrypto
+          for i in $(ls /usr/bin/*-8); do sudo -E ln -sf $i ${i%%-8*}; done
+          sudo -E ln -sf /usr/include/asm-generic /usr/include/asm
+          sudo -E apt-get autoremove -y --purge
+          sudo -E apt-get clean -y
+          sudo -E swapoff -a
+          sudo -E rm -rf /usr/share/dotnet /etc/mysql /etc/php /usr/local/lib/android /opt/ghc /swapfile
+      - name: Clone Source
+        run: |
+          #cd "/home/runner"
+          git clone --branch "master" --single-branch "https://github.com/project-openwrt/openwrt" "openwrt"
+          sudo chown -R runner:runner "openwrt"
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      
+      - name: Cleanup Old Action Artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days # Setting this to 0 will delete all artifacts
+
+      - name: Merge CW
+        run: |
+          cd openwrt
+          rm ./package/base-files/files/etc/rc.local
+          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/rc.local/gl-rc.local -O ./package/base-files/files/etc/rc.local
+          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/rc.local/rc.local.ori -O ./package/base-files/files/etc/rc.local.ori
+          mkdir ./package/base-files/files/root
+          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/setup/gl-mv-setup.sh -O ./package/base-files/files/root/setup.sh
+          chmod +x ./package/base-files/files/root/setup.sh
+
+      - name: Make Config
+        run: |
+          cd openwrt
+          #rm ./.config
+          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/1_common.seed -O ./.config
+          wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/9_1g_arm.seed -O ./9_1g_arm.seed
+          #wget https://github.com/CWZ7605/CheeseSth/raw/master/CheeseWrt/.config/4_with_turbo_acc_full.seed  -O ./4_without_turbo_acc.seed 
+          
+          cat ./9_1g_arm.seed >> ./.config
+          #cat ./4_without_turbo_acc.seed >> ./.config
+          
+          cat >> ./.config <<EOF
+          CONFIG_TARGET_mvebu=y
+          CONFIG_TARGET_mvebu_cortexa53=y
+          CONFIG_TARGET_mvebu_cortexa53_DEVICE_glinet_gl-mv1000=y
+          EOF
+          make defconfig
+      - name: Make Download
+        run: |
+          df -h
+          cd openwrt
+          make download -j10
+      - name: Compile Openwrt
+        run: |
+          df -h
+          cd openwrt
+          #make -j$[$(nproc)+1] V=s
+          make -j5 V=s
+      - name: Print Disk Space After
+        run: df -h
+      - name: Assemble Artifact
+        id: assemble_artifact
+        run: |
+          rm -rf ./artifact/
+          mkdir -p ./artifact/
+          cp openwrt/bin/targets/mvebu/cortexa53/*.img.gz ./artifact/
+          release_tag="GL-MV1000-$(date +%Y-%m-%d)"
+          echo "##[set-output name=release_tag;]$release_tag"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ steps.assemble_artifact.outputs.release_tag }}-ROM
+          path: ./artifact/
+
